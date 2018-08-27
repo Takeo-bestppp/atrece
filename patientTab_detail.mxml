@@ -1,0 +1,1519 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+		   width="95%" height="100%"
+		   xmlns:data="fl.data.*" initialize="init();" xmlns:MyComponent="MyComponent.*"  borderStyle="outset" themeColor="#FFFFFF" alpha="1.0" backgroundAlpha="1.0">
+
+	<mx:Metadata>
+	[Event(name="patientOnDelete", type="flash.events.Event")]
+	[Event(name="onShinkiTouroku", type="flash.events.Event")]
+</mx:Metadata>
+
+
+	<mx:Model id="patientDetailInfoModel">
+		<information>
+			<patientID>{patientDetailInfoObj.PatientID}</patientID>
+			<patientFamilyName>{patientDetailInfoObj.PatientFamilyName}</patientFamilyName>
+			<patientFirstName>{patientDetailInfoObj.PatientFirstName}</patientFirstName>
+			<patientFamilyNameKana>{patientDetailInfoObj.PatientFamilyNameKana}</patientFamilyNameKana>
+			<patientFirstNameKana>{patientDetailInfoObj.PatientFirstNameKana}</patientFirstNameKana>
+			<zip>{patientDetailInfoObj.Zip}</zip>
+			<add1>{patientDetailInfoObj.Add1}</add1>
+			<add2>{patientDetailInfoObj.Add2}</add2>
+			<tel>{patientDetailInfoObj.Tel1}</tel>
+			<sex>{patientDetailInfoObj.Sex}</sex>
+			<birthGengo>{patientDetailInfoObj.BirthGemgo}</birthGengo>
+			<birthYear>{patientDetailInfoObj.BirthYear}</birthYear>
+			<birthMonth>{patientDetailInfoObj.BirthMonth}</birthMonth>
+			<birthDay>{patientDetailInfoObj.BirthDay}</birthDay>
+			<syoshinGengo>{patientDetailInfoObj.SyoshinGengo}</syoshinGengo>
+			<syoshinYear>{patientDetailInfoObj.SyoshinYear}</syoshinYear>
+			<syoshinMonth>{patientDetailInfoObj.SyoshinMonth}</syoshinMonth>
+			<syoshinDay>{patientDetailInfoObj.SyoshinDay}</syoshinDay>
+			<hokenjyaNo0>{patientDetailInfoObj.HokenjyaNoHoubetsu1}</hokenjyaNo0>
+			<hokenjyaNo1>{patientDetailInfoObj.HokenjyaNoHoubetsu2}</hokenjyaNo1>
+			<hokenjyaNo2>{patientDetailInfoObj.HokenjyaNoTodouhuken1}</hokenjyaNo2>
+			<hokenjyaNo3>{patientDetailInfoObj.HokenjyaNoTodouhuken2}</hokenjyaNo3>
+			<hokenjyaNo4>{patientDetailInfoObj.HokenjyaNoHokensya1}</hokenjyaNo4>
+			<hokenjyaNo5>{patientDetailInfoObj.HokenjyaNoHokensya2}</hokenjyaNo5>
+			<hokenjyaNo6>{patientDetailInfoObj.HokenjyaNoHokensya3}</hokenjyaNo6>
+			<hokenjyaNo7>{patientDetailInfoObj.HokenjyaNoKensyo}</hokenjyaNo7>
+			<hokenNo>{patientDetailInfoObj.HokenNo}</hokenNo>
+			<hokenKigou>{patientDetailInfoObj.HokenKigou}</hokenKigou>
+			<hihokensyamei>{patientDetailInfoObj.HiHokensyaMei}</hihokensyamei>
+			<shikakuGengo>{patientDetailInfoObj.ShikakuGengo}</shikakuGengo>
+			<shikakuYear>{patientDetailInfoObj.ShikakuYear}</shikakuYear>
+			<shikakuMonth>{patientDetailInfoObj.ShikakuMonth}</shikakuMonth>
+			<shikakuDay>{patientDetailInfoObj.ShikakuDay}</shikakuDay>
+			<yuukouGengo>{patientDetailInfoObj.YuukouGengo}</yuukouGengo>
+			<yuukouYear>{patientDetailInfoObj.YuukouYear}</yuukouYear>
+			<yuukouMonth>{patientDetailInfoObj.YuukouMonth}</yuukouMonth>
+			<yuukouDay>{patientDetailInfoObj.YuukouDay}</yuukouDay>
+			<senpakuSyoyuusya>{patientDetailInfoObj.SenpakuSyoyuusya}</senpakuSyoyuusya>
+			<senpakuTel>{patientDetailInfoObj.SenpakuTel}</senpakuTel>
+			<senpakuAdd>{patientDetailInfoObj.SenpakuAdd}</senpakuAdd>
+			<hokenjyaName>{patientDetailInfoObj.HokenjyaName}</hokenjyaName>
+			<hokenjyaTel>{patientDetailInfoObj.HokenjyaTel}</hokenjyaTel>
+			<hokenKakuninGengo>{patientDetailInfoObj.HokenKakuninGengo}</hokenKakuninGengo>
+			<hokenKakuninYear>{patientDetailInfoObj.HokenKakuninYear}</hokenKakuninYear>
+			<hokenKakuninMonth>{patientDetailInfoObj.HokenKakuninMonth}</hokenKakuninMonth>
+			<hokenKakuninDay>{patientDetailInfoObj.HokenKakuninDay}</hokenKakuninDay>
+			<note>{patientDetailInfoObj.Note}</note>
+
+		</information>
+	</mx:Model>
+
+
+
+
+	<mx:Script>
+		<![CDATA[
+			import as3.Log;
+			import mx.collections.ArrayCollection;
+			import utils.StringUtil;
+			import mx.events.CloseEvent;
+			import dataType.PatientDetailObj;
+			import com.yvory.date.GengoObj;
+			import as3.GlobalInfo;
+			import com.yvory.date.Gengo;
+			import mx.formatters.DateFormatter;
+			import mx.controls.Alert
+
+			//患者情報Object
+			[Bindable]
+			private var patientDetailInfoObj:PatientDetailObj = new PatientDetailObj();
+			
+			[Bindable]
+			private var __arrDoctor:ArrayCollection = new ArrayCollection();
+			
+			//高額療養費
+			private const KOUGAKU_MAX_1:uint = 14000;
+			private const KOUGAKU_MAX_3:uint = 57600;
+			private const KOUGAKU_MAX_KUBUN:uint = 8000; 
+
+			private var tmpObj:Object = {};
+
+			//編集したかどうか
+			private var __isEdited:Boolean=false;
+
+			/**
+			   初期化 initはloadPatientDetailにまとめてもよい
+			 */
+			private function init():void{
+				Log.out("patientTab_detail init");
+
+				this.patientDetailInfoObj = new PatientDetailObj();
+				this.nenreiText.text = "";
+				__isEdited = false;
+
+				//患者を選択してこの画面に来た（初期化した）場合はRemotingを実行 そうでない場合は新規登録
+				if(GlobalInfo.selectedPatientID!=0){
+					Log.out("patientTab_detail call PatientDetail.readData");
+					var obj:Object = {userID:GlobalInfo.userID,PatientID:GlobalInfo.selectedPatientID};
+					GlobalInfo.remotingConnection.call("PatientDetail.readData",new Responder(resultFunc,faultFunc),obj);
+				}else{
+					this.createNew();
+				}
+			}
+			/**
+			   新規患者登録
+			 */
+			public function createNewPatient():void{
+				this.createNew();
+			}
+			private function createNew():void{
+				Log.out("patientTab_detail createNew");
+				
+				//担当医コンボボックス
+				__arrDoctor = GlobalInfo.getDoctorCombo();
+				
+				this.patientDetailInfoObj = new PatientDetailObj();
+
+				this.nenreiText.text = "";
+				resetFutanWariaiStyle();
+				resetKohiFutanWariaiStyle();
+				resetKougakuStyle();
+				__isEdited = false;
+				
+				YuukouGCombo.selectedIndex = 4;
+				shikakuGCombo.selectedIndex = 4;
+				doctorCombo.selectedIndex = 0;
+				sexRadioGroup.selection = null;
+			}
+			/**
+			   患者情報のロード
+			 */
+			public function loadPatientDetail():void{
+				Log.out("patientTab_detail loadPatientDetail");
+
+				//ロード				
+				this.patientDetailInfoObj = new PatientDetailObj();
+				this.nenreiText.text = "";
+				resetFutanWariaiStyle();
+				resetKohiFutanWariaiStyle();
+				resetKougakuStyle();
+				__isEdited = false;
+
+				//IDが0の時は新規登録
+				if(GlobalInfo.selectedPatientID!=0){
+					Log.out("patientTab_detail call PatientDetail.readData");
+					var obj:Object = {userID:GlobalInfo.userID,PatientID:GlobalInfo.selectedPatientID};
+					GlobalInfo.remotingConnection.call("PatientDetail.readData",new Responder(resultFunc,faultFunc),obj);
+				}
+			}
+			/**
+			   更新ボタンを押下
+			 */
+			private function onClickUpdateBtn(event:MouseEvent):void{
+
+				Alert.show("患者情報を保存します。よろしいですか？",GlobalInfo.ALERT_TITLE,Alert.YES | Alert.NO,this,onCloseSavePop,null,Alert.YES);
+
+				//this.updatePatientDetail();
+			}
+			private function onCloseSavePop(e:CloseEvent):void{
+				if(e.detail==Alert.YES){
+					this.updatePatientDetail();
+				}
+			}
+			/**
+			   患者情報のアップロード Remoting開始
+			 */
+			public function updatePatientDetail():void{
+				
+				//
+				this.hokenKigouText.text = utils.StringUtil.convertAlphameric(this.hokenKigouText.text);
+				
+
+				var sendObj:Object = {
+						PatientID:this.patientIDText.text,
+						//satoh history_id
+//				PatientID:this.historyIDText.text,
+//						PatientName:this.patientNameText.text,
+//						PatientNameKana:this.patientNameKanaText.text,
+						PatientFamilyName:this.patientFamilyNameText.text,
+						PatientFirstName:this.patientFirstNameText.text,
+						PatientFamilyNameKana:this.patientFamilyNameKanaText.text,
+						PatientFirstNameKana:this.patientFirstNameKanaText.text,
+						Zip:this.zipCodeText.text,
+						Add1:this.add1Text.text,
+						Add2:this.add2Text.text,
+						Tel:this.telText.text,
+						Tel2:this.tel2Text.text,
+						Sex:this.sexRadioGroup.selectedValue,
+						Birth:this.createReturnYearString(this.birthGCombo.gengo,this.birthYText.text,this.birthMText.text,this.birthDText.text),
+						SyoshinDate:this.createReturnYearString(this.syoshinGCombo.gengo,this.syoshinYText.text,this.syoshinMText.text,this.syoshinDText.text),
+						HokenSyubetsu:"",
+						HokenjyaNo:this.no_0.text+this.no_1.text+this.no_2.text+this.no_3.text+this.no_4.text+this.no_5.text+this.no_6.text+this.no_7.text,
+						HokenKigou:this.hokenKigouText.text,
+						HokenNo:this.hokenNoText.text,
+						HiHokensyaMei:this.hiHokensyaMeiText.text,
+						ShikakuDate:this.createReturnYearString(this.shikakuGCombo.gengo,this.shikakuYText.text,this.shikakuMText.text,this.shikakuDText.text),
+						Yuukoukigen:this.createReturnYearString(this.YuukouGCombo.gengo,this.YuukouYText.text,this.YuukouMText.text,this.YuukouDText.text),
+						SyokumuJiyuu:this.jiyuuCombo.selectedIndex,
+						SenpakuSyoyuusya:this.senpakuSyoyuusyaText.text,
+						SenpakuTel:this.senpakuTelText.text,
+						SenpakuAdd:this.senpakuAddText.text,
+						HokenjyaName:this.hokenjyaNameText.text,
+						HokenjyaTel:this.hokenjyaTelText.text,
+						HokenjyaAdd:this.hokenjyaAddText.text,
+						HokensyoKakuninDate:this.createReturnYearString(this.hokensyoGCombo.gengo,this.hokensyoYText.text,this.hokensyoMText.text,this.hokensyoDText.text),
+						Zokugara:this.zokugaraCombo.selectedIndex,
+						//FutanWariai:this.futanText.text,
+						FutanWariai:this.futanStepper.value,
+						KohiFutanWariai:this.kohiFutanWariaiStepper.value,
+
+						KohiUmu:int(this.kohiCheckBox.selected),
+
+						//RoujinTaisyoku:this.taisyokurojinCombo.selectedIndex,
+
+						Bikou:this.bikouText.text,
+
+						GetsujiMax:this.getsujiText.text,
+						NichijiMax:this.nichijiText.text,
+						GetsujiKaisuMax:this.getsujiKaisuText.text,
+						FutanOnlySyoshin:this.futanOnlySyoshinText.text,
+						
+						KougakuGetsujiMax:this.kogakuGetsujiMax.text,
+						KougakuKubun:this.kougakuKubunRadioGroup.selectedValue,
+
+						//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+						Konnan:String(int(this.konnanCheckBox.selected)),
+						//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+						
+						TekiyoComment1:this.TekiyoComment1.text,
+						TekiyoComment2:this.TekiyoComment2.text,
+						TekiyoComment3:this.TekiyoComment3.text,
+						DoctorId:this.doctorCombo.selectedItem.data,
+						
+						Note:this.noteText.text
+
+					}
+				var kohiFutanNo1String:String = new String();
+				var kohiFutanNo2String:String = new String();
+				var kohiJyukyuNo1String:String = new String();
+				var kohiJyukyuNo2String:String = new String()
+				var ShicyosonNoString:String = new String();
+				var RoujinJyukyuNoString:String = new String();
+				
+				//公費負担者番号１、２
+				//空欄部分はスペースで埋める
+				for(var i:int=0;i<8;i++){
+					if(this["c_"+i].text == ""){
+						kohiFutanNo1String+=" ";
+					}else{
+						kohiFutanNo1String+=this["c_"+i].text;
+					}
+					if(this["a_"+i].text == ""){
+						kohiFutanNo2String+=" ";
+					}else{
+						kohiFutanNo2String+=this["a_"+i].text;
+					}
+				}
+				//公費受給者番号１，２
+				for(var j:int=0;j<7;j++){
+					kohiJyukyuNo1String+=this["d_"+j].text;
+					kohiJyukyuNo2String+=this["b_"+j].text;
+				}
+				sendObj.KohiFutanNo1 = kohiFutanNo1String;
+				sendObj.KohiJyukyuNo1 = kohiJyukyuNo1String;
+				sendObj.kohiFutanNo2 = kohiFutanNo2String
+				sendObj.kohiJyukyuNo2 = kohiJyukyuNo2String;
+				sendObj.ShicyosonNo = ShicyosonNoString;
+				sendObj.RoujinJyukyuNo = RoujinJyukyuNoString
+
+
+
+				var obj:Object = {userID:GlobalInfo.userID,PatientID:GlobalInfo.selectedPatientID,data:sendObj}			
+				GlobalInfo.remotingConnection.call("PatientDetail.writeData",new Responder(writeOnSuccess,writeOnFault),obj);
+			}
+
+			/**
+			   元号・元号年・月・日から YYYY/MM/DDを作成
+			 */
+			private function createReturnYearString(gengoString:String,gengoYear:String,month:String,day:String):String{
+				var ad:int = Gengo.toAD(gengoString,int(gengoYear))
+				var dateString:String = String(ad)+"/"+String(month)+"/"+String(day);
+				return dateString;
+			}
+			/**
+			   患者情報更新成功
+			 */
+			private function writeOnSuccess(resultObj:Object):void{
+				//trace(this.patientDetailInfoObj.PatientID)
+				//trace(resultObj.PatientID)
+
+				if(resultObj.result){
+					this.patientDetailInfoObj.FutanWariaiSaved = this.futanStepper.value;
+					this.patientDetailInfoObj.KohiFutanWariaiSaved = this.kohiFutanWariaiStepper.value;
+					this.patientDetailInfoObj.KougakuGetsujiMaxSaved = this.kogakuGetsujiMax.text;
+					
+					resetFutanWariaiStyle();
+					resetKohiFutanWariaiStyle();
+					resetKougakuStyle();
+					__isEdited=false
+					Alert.show("保存しました",GlobalInfo.ALERT_TITLE);
+					//新規登録の時はデータを読み直し
+					if(this.patientDetailInfoObj.PatientID=="0"){
+						GlobalInfo.selectedPatientID = resultObj.PatientID
+						this.loadPatientDetail();
+					}
+				}else{
+					var alertMessageString:String = new String();
+					for(var i:int=0;i<resultObj.ErrorMessage.length;i++){
+						alertMessageString += resultObj.ErrorMessage[i] + "\n";
+					}
+					Alert.show(alertMessageString,GlobalInfo.ALERT_TITLE);
+				}
+			}
+			
+			/**
+			   Remoting失敗
+			 */
+			private function writeOnFault(resultObj:Object):void{
+
+			}
+
+			private function checkDateStringFormat(dateString:String):Boolean{
+				var returnFlag:Boolean = true;
+				var testString:String = dateString;
+
+				var splitedArray:Array = testString.split("/");
+				if(int(splitedArray[0])>1900 && int(splitedArray[0])<2100){
+					//true
+				}else{
+					returnFlag=false;
+				}
+				if(int(splitedArray[1])>0 && int(splitedArray[1])<13){
+					//true
+				}else{
+					returnFlag=false;
+				}
+				if(int(splitedArray[2])>0 && int(splitedArray[2])<32){
+					//true
+				}else{
+					returnFlag=false;
+				}
+
+				//trace("■■日付チェック■■"+returnFlag)
+
+
+				return returnFlag;
+			}
+
+
+			/**
+			   PatientDetail.readData のRemotingが成功
+			 */
+			private function resultFunc(resultObj:Object):void{
+				Log.out("patientTab_detail resultFunc start");
+								
+				//担当医コンボボックス
+				__arrDoctor = GlobalInfo.getDoctorCombo();
+	
+				if(resultObj.result){
+					resetFutanWariaiStyle();
+					resetKohiFutanWariaiStyle();
+					resetKougakuStyle();
+
+					tmpObj = resultObj.data;
+
+					// = resultObj.data;
+					this.patientDetailInfoObj.PatientID = resultObj.data.PatientID;
+					//satoh history_idは患者情報の履歴を保持、表示するための枝番のイメージ
+					this.patientDetailInfoObj.HistoryID = resultObj.data.HistoryID;
+
+					//this.patientDetailInfoObj.PatientName = resultObj.data.PatientName;
+					//this.patientDetailInfoObj.PatientNameKana = resultObj.data.PatientNameKana;
+					this.patientDetailInfoObj.PatientFamilyName = resultObj.data.PatientFamilyName;
+					this.patientDetailInfoObj.PatientFirstName = resultObj.data.PatientFirstName;
+					this.patientDetailInfoObj.PatientFamilyNameKana= resultObj.data.PatientFamilyNameKana;
+					this.patientDetailInfoObj.PatientFirstNameKana = resultObj.data.PatientFirstNameKana;
+					
+					this.patientDetailInfoObj.Zip = resultObj.data.Zip;
+					this.patientDetailInfoObj.Add1 = resultObj.data.Add1;
+					this.patientDetailInfoObj.Add2 = resultObj.data.Add2;
+					this.patientDetailInfoObj.Tel1 = resultObj.data.Tel;
+					this.patientDetailInfoObj.Tel2 = resultObj.data.Tel2;
+					this.patientDetailInfoObj.Sex = resultObj.data.Sex;
+
+
+
+
+					//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+					//年齢格納
+					//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+					//ここで不正な年月日を判断
+					//var testDate:Date = new Date(
+
+					if(resultObj.data.Birth==""){
+
+					}else{
+						//正しい日付の場合
+						if(this.checkDateStringFormat(resultObj.data.Birth)){
+							var birthArray:Array = (resultObj.data.Birth as String).split("/");
+							var birthDate:Date = new Date(birthArray[0],birthArray[1]-1,birthArray[2]);
+							this.patientDetailInfoObj.BirthDayDate = birthDate;
+							var birthGengoObj:GengoObj = Gengo.toGengo(birthDate);
+							this.patientDetailInfoObj.BirthGemgo = birthGengoObj.gengo;
+							this.patientDetailInfoObj.BirthYear = String(birthGengoObj.gengoYear);
+							this.patientDetailInfoObj.BirthMonth = (birthArray[1]);
+							this.patientDetailInfoObj.BirthDay = (birthArray[2]);
+
+						}else{
+							this.patientDetailInfoObj.BirthGemgo = ""
+							this.patientDetailInfoObj.BirthYear = ""
+							this.patientDetailInfoObj.BirthMonth = ""
+							this.patientDetailInfoObj.BirthDay = ""
+
+						}
+					}
+
+					if(resultObj.data.SyoshinDate==""){
+
+					}else{
+
+						if(this.checkDateStringFormat(resultObj.data.SyoshinDate)){
+							//trace("○○")
+							var syoshinDateArray:Array = (resultObj.data.SyoshinDate as String).split("/");
+							var syoshinGengoObj:GengoObj = Gengo.toGengo(new Date(syoshinDateArray[0],syoshinDateArray[1]-1,syoshinDateArray[2]));
+							this.patientDetailInfoObj.SyoshinGengo = syoshinGengoObj.gengo;
+							this.patientDetailInfoObj.SyoshinYear = String(syoshinGengoObj.gengoYear);
+							this.patientDetailInfoObj.SyoshinMonth = (syoshinDateArray[1]);
+							this.patientDetailInfoObj.SyoshinDay = (syoshinDateArray[2]);
+						}else{
+							//trace("××")
+						}
+							//
+							//
+
+					}
+
+					var hokenjyaNo:String = resultObj.data.HokenjyaNo;
+					while(hokenjyaNo.length<8){
+						hokenjyaNo = " "+hokenjyaNo;
+					}
+					this.patientDetailInfoObj.HokenjyaNoHoubetsu1 = hokenjyaNo.substr(0,1);
+					this.patientDetailInfoObj.HokenjyaNoHoubetsu2 = hokenjyaNo.substr(1,1);
+					this.patientDetailInfoObj.HokenjyaNoTodouhuken1 = hokenjyaNo.substr(2,1);
+					this.patientDetailInfoObj.HokenjyaNoTodouhuken2 = hokenjyaNo.substr(3,1);
+					this.patientDetailInfoObj.HokenjyaNoHokensya1 = hokenjyaNo.substr(4,1);
+					this.patientDetailInfoObj.HokenjyaNoHokensya2 = hokenjyaNo.substr(5,1);
+					this.patientDetailInfoObj.HokenjyaNoHokensya3 = hokenjyaNo.substr(6,1);
+					this.patientDetailInfoObj.HokenjyaNoKensyo = hokenjyaNo.substr(7,1);
+
+					this.patientDetailInfoObj.HokenKigou = resultObj.data.HokenKigou;
+					this.patientDetailInfoObj.HokenNo = resultObj.data.HokenNo;
+
+					this.patientDetailInfoObj.HiHokensyaMei = resultObj.data.HiHokensyaMei;
+
+					if(resultObj.data.ShikakuDate==""){
+
+					}else{
+
+						if(this.checkDateStringFormat(resultObj.data.ShikakuDate)){
+							var shikakuDateArray:Array = (resultObj.data.ShikakuDate as String).split("/");
+							var shikakuGengoObj:GengoObj = Gengo.toGengo(new Date(shikakuDateArray[0],shikakuDateArray[1]-1,shikakuDateArray[2]));
+							this.patientDetailInfoObj.ShikakuGengo = shikakuGengoObj.gengo;
+							this.patientDetailInfoObj.ShikakuYear = String(shikakuGengoObj.gengoYear);
+							this.patientDetailInfoObj.ShikakuMonth = shikakuDateArray[1];
+							this.patientDetailInfoObj.ShikakuDay = shikakuDateArray[2];
+						}else{
+
+						}
+
+					}
+
+					if(resultObj.data.Yuukoukigen==""){
+
+					}else{
+
+
+						if(this.checkDateStringFormat(resultObj.data.Yuukoukigen)){
+							var yuukouDateArray:Array = (resultObj.data.Yuukoukigen as String).split("/");
+							var yuukouGengoObj:GengoObj = Gengo.toGengo(new Date(yuukouDateArray[0],yuukouDateArray[1]-1,yuukouDateArray[2]));
+							this.patientDetailInfoObj.YuukouGengo = yuukouGengoObj.gengo;
+							this.patientDetailInfoObj.YuukouYear = String(yuukouGengoObj.gengoYear);
+							this.patientDetailInfoObj.YuukouMonth = yuukouDateArray[1];
+							this.patientDetailInfoObj.YuukouDay = yuukouDateArray[2];
+						}else{
+
+						}
+
+					}
+
+
+					this.patientDetailInfoObj.SenpakuSyoyuusya = resultObj.data.SenpakuSyoyuusya;
+					this.patientDetailInfoObj.SenpakuTel = resultObj.data.SenpakuTel;
+					this.patientDetailInfoObj.SenpakuAdd = resultObj.data.SenpakuAdd;
+
+					this.patientDetailInfoObj.HokenjyaName = resultObj.data.HokenjyaName;
+					this.patientDetailInfoObj.HokenjyaTel = resultObj.data.HokenjyaTel;
+					this.patientDetailInfoObj.HokenjyaAdd = resultObj.data.HokenjyaAdd;
+
+
+					if(resultObj.data.HokensyoKakuninDate==""){
+
+					}else{
+						if(this.checkDateStringFormat(resultObj.data.HokensyoKakuninDate)){
+							var hokensyoDateArray:Array = (resultObj.data.HokensyoKakuninDate as String).split("/");
+							var hokenGengoObj:GengoObj = Gengo.toGengo(new Date(hokensyoDateArray[0],hokensyoDateArray[1]-1,hokensyoDateArray[2]));
+							this.patientDetailInfoObj.HokenKakuninGengo = hokenGengoObj.gengo;
+							this.patientDetailInfoObj.HokenKakuninYear = String(hokenGengoObj.gengoYear);
+							this.patientDetailInfoObj.HokenKakuninMonth = hokensyoDateArray[1];
+							this.patientDetailInfoObj.HokenKakuninDay = hokensyoDateArray[2];
+						}else{
+
+						}
+					}
+
+
+					this.patientDetailInfoObj.Zokugara = int(resultObj.data.Zokugara);
+					this.patientDetailInfoObj.FutanWariai = resultObj.data.FutanWariai;
+					this.patientDetailInfoObj.FutanWariaiSaved = resultObj.data.FutanWariai;	//DB保存値を保持しておく（比較用）
+					this.patientDetailInfoObj.KohiFutanWariai = resultObj.data.KohiFutanWariai;
+					this.patientDetailInfoObj.KohiFutanWariaiSaved = resultObj.data.KohiFutanWariai;	//DB保存値を保持しておく（比較用）
+					this.patientDetailInfoObj.KohiUmu = Boolean(int(resultObj.data.KohiUmu));
+					this.patientDetailInfoObj.SyokumuJiyuu = int(resultObj.data.SyokumuJiyuu);		
+
+					for(var i:int=0;i<8;i++){
+					   this.patientDetailInfoObj["KohiFutanNo1_"+i] = resultObj.data.KohiFutanNo1.substr(i,1);
+					   this.patientDetailInfoObj["KohiFutanNo2_"+i] = resultObj.data.KohiFutanNo2.substr(i,1);
+					}
+
+					for(var j:int=0;j<7;j++){
+						this.patientDetailInfoObj["KohiJyukyuNo1_"+j] = resultObj.data.KohiJyukyuNo1.substr(j,1);
+						this.patientDetailInfoObj["KohiJyukyuNo2_"+j] = resultObj.data.KohiJyukyuNo2.substr(j,1);
+					}
+
+					//RoujinTaisyoku
+					this.patientDetailInfoObj.RoujinTaisyoku = resultObj.data.RoujinTaisyoku;
+
+					try{
+						//selected="{Boolean(int(data.Sentaku))}"
+						this.patientDetailInfoObj.Konnan = Boolean(int(resultObj.data.Konnan));
+					}catch(e:Error){
+
+					}
+
+					this.patientDetailInfoObj.bikou = resultObj.data.Bikou;
+					this.patientDetailInfoObj.GetsujiMax = resultObj.data.GetsujiMax;
+					this.patientDetailInfoObj.NichijiMax = resultObj.data.NichijiMax;
+					this.patientDetailInfoObj.GetsujiKaisuMax = resultObj.data.GetsujiKaisuMax;
+					this.patientDetailInfoObj.FutanOnlySyoshin = resultObj.data.FutanOnlySyoshin;
+					
+					this.patientDetailInfoObj.KougakuGetsujiMax = resultObj.data.KougakuGetsujiMax;
+					this.patientDetailInfoObj.KougakuGetsujiMaxSaved = resultObj.data.KougakuGetsujiMax;	//DB保存値を保持しておく（比較用）
+					this.patientDetailInfoObj.KougakuKubun = resultObj.data.KougakuKubun;
+					
+					this.patientDetailInfoObj.TekiyoComment1 = resultObj.data.TekiyoComment1;
+					this.patientDetailInfoObj.TekiyoComment2 = resultObj.data.TekiyoComment2;
+					this.patientDetailInfoObj.TekiyoComment3 = resultObj.data.TekiyoComment3;
+					this.patientDetailInfoObj.DoctorId = resultObj.data.DoctorId;
+					
+					for(var key:int=0; key<__arrDoctor.length; key++){
+						var doctor:Object = __arrDoctor.getItemAt(key);
+						if(doctor.data == this.patientDetailInfoObj.DoctorId){
+							this.doctorCombo.selectedIndex = key;
+						}
+					} 
+					
+					this.patientDetailInfoObj.Note = resultObj.data.Note;
+					
+					//年齢の再計算は最後に行う（計算結果によって、負担割合の上書きをおこなうことがあるため）
+					if(this.checkDateStringFormat(resultObj.data.Birth)){
+						setNenrei();
+					}					
+					setKougakuGetsujiMax();
+					
+					this.dispatchEvent(new Event("onShinkiTouroku"));
+					
+				Log.out("patientTab_detail resultFunc end");
+
+				}else{
+					//Remoting失敗
+				}
+			}
+
+			private function addSpaceString(inputString:String,len:int):String{
+				var returnString:String = inputString;
+				while(returnString.length<len){
+					returnString = " "+returnString;
+				}
+				return returnString;
+			}
+			/**
+			   ReadData失敗
+			 */
+			private function faultFunc(resultObj:Object):void{
+
+			}
+			/**
+			   本日確認ボタンを押下
+			 */
+			private function onClickConfirmToday(event:MouseEvent):void{
+				var nowDate:Date = new Date();
+				var nowGengoObj:GengoObj = Gengo.toGengo(new Date());
+				this.hokensyoGCombo.gengo = nowGengoObj.gengo;
+				this.hokensyoYText.text = String(nowGengoObj.gengoYear);
+				this.hokensyoMText.text = String(nowDate.getMonth()+1);
+				this.hokensyoDText.text = String(nowDate.getDate());
+			}
+
+			/**
+			   ユーザーが表示上のデータを更新したら、更新フラグをたてる
+			 */
+			private function onFieldChange(event:Event):void{
+				if(!this.__isEdited){
+					this.__isEdited=true;
+				}
+			}
+			/**
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			   年齢を計算
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			*/
+			/*
+			表示用の「そのままの」年齢を返す
+			*/
+			private function calcNormalNenrei():int{
+				var nenrei:int = 0;
+				
+				//年齢計算用フォーマット
+				var dFormatter:DateFormatter = new DateFormatter();
+				dFormatter.formatString="YYYYMMDD";
+
+				var tmpNowDate:Date = new Date();
+				var tmpNowDateString:String = dFormatter.format(tmpNowDate);
+
+				var tmpBirthDayYear:int = Gengo.toAD(this.birthGCombo.gengo,int(this.birthYText.text));
+				var tmpBirthDayMonth:String = this.birthMText.text;
+				var tmpBirthDayDate:String =this.birthDText.text;
+				var tmpBirthDate:Date = new Date(tmpBirthDayYear,int(tmpBirthDayMonth)-1,tmpBirthDayDate);
+				var tmpBirthDateString:String =  dFormatter.format(tmpBirthDate);
+
+				nenrei = Math.floor((int(tmpNowDateString) - int(tmpBirthDateString))/10000);
+
+				return nenrei;				
+			}			
+			/*
+			表示用の「そのままの」年齢を返す場合
+			年齢は、誕生月の翌月１日を基準とする形に統一してください。
+			なお、１日生まれの人だけは誕生日の属する月の１日から適用されます。
+			*/
+			private function calcNenrei():int{
+				var nenrei:int = 0;
+				
+				//年齢計算用フォーマット
+				var dFormatter:DateFormatter = new DateFormatter();
+				dFormatter.formatString="YYYYMMDD";
+
+				var tmpNowDate:Date = new Date();
+				var tmpNowDateString:String = dFormatter.format(tmpNowDate);
+
+				var tmpBirthDayYear:int = Gengo.toAD(this.birthGCombo.gengo,int(this.birthYText.text));
+				var tmpBirthDayMonth:String = this.birthMText.text;
+				var tmpBirthDayDate:String =this.birthDText.text;
+				var tmpBirthDate:Date = new Date(tmpBirthDayYear,int(tmpBirthDayMonth)-1,tmpBirthDayDate);
+				var tmpBirthDateString:String =  dFormatter.format(tmpBirthDate);
+
+				nenrei = Math.floor((int(tmpNowDateString) - int(tmpBirthDateString))/10000);
+				
+				var tmpNowDateYM:String = StringUtil.zeroPadding(tmpNowDate.month+1,2) + StringUtil.zeroPadding(tmpNowDate.date,2);
+				var tmpBirthDateYM:String = StringUtil.zeroPadding(tmpBirthDate.month+1,2) + StringUtil.zeroPadding(tmpBirthDate.date,2);
+				
+				//今年の誕生日が過ぎている場合
+				if(tmpNowDateYM >= tmpBirthDateYM){
+					//1日生まれ
+					if(tmpBirthDayDate == "1"){
+						;	//そのまま
+					}else{
+						//今年の、誕生日の翌月1日を算出
+						var nextMonthDate:Date = new Date(tmpNowDate.fullYear, tmpBirthDate.month + 1, 1);
+						///var nextMonthDate:Date = new Date(tmpNowDate.fullYear, tmpBirthDayDate.month + 1, tmpBirthDayDate.date);
+
+						//今が翌月1日より前なら 年齢は誕生日前の値
+						if(tmpNowDate < nextMonthDate){
+							nenrei--;							
+						}
+					}
+				}
+								
+				return nenrei;				
+			}
+			
+			private function setNenrei():void{
+				Log.out("setNenrei");
+
+				var normalNenrei:int = calcNormalNenrei();
+				this.nenreiText.text = String(normalNenrei);
+				GlobalInfo.userAge = normalNenrei;
+				
+				var calcNenrei:int = calcNenrei();
+				//負担割合の自動設定
+				/*
+				小学校就学前：2割
+				小学校就学後～69歳：3割
+				70歳以上：1割（1割の場合と3割の場合があるので）
+				誕生日が1944年4月2日以降で、かつ年齢が「70歳（70歳に達する日の属する月の翌月1日から）以上75歳未満」の場合：2割
+
+				「小学校就学」の定義は以下の通り。
+				小学校就学前：満6歳の誕生日以後の最初の3月31日まで
+				小学校就学後：満6歳の誕生日以後の最初の4月1日以降	
+				*/
+				//=======================================
+				//年度のFrom To作成
+				var fromDate:Date;
+				var toDate:Date;
+				
+				var today:Date = new Date();   //今日
+				var thisMonth:int = today.getMonth(); //今月
+				
+				//4月から12月？(値的には3～11)
+				if(thisMonth > 2  && thisMonth < 12){
+					fromDate = new Date(today.getFullYear(), 3, 1);  //同年の4/1
+					toDate = new Date(today.getFullYear() + 1, 3, 1); //翌年の4/1
+				//1,2,3月
+				}else{
+					fromDate = new Date(today.getFullYear() - 1, 3, 1); //翌年の4/1
+					toDate = new Date(today.getFullYear(), 3, 1);  //同年の4/1
+				}
+
+				//=======================================
+				//その年度内の誕生日の作成
+				var thisBirth:Date;
+				var tmpBirthDayYear:int = Gengo.toAD(this.birthGCombo.gengo,int(this.birthYText.text));
+				var tmpBirthDayMonth:String = this.birthMText.text;
+				var tmpBirthDayDate:String =this.birthDText.text;					
+				var birth:Date = new Date(tmpBirthDayYear,int(tmpBirthDayMonth)-1,tmpBirthDayDate);    //<-----INPUTです
+				var birthMonth:int = birth.getMonth(); //生まれ月
+				var birthDate:int = birth.getDate(); //生まれた日にち
+				
+				//4月から12月生まれ？(値的には3～11)
+				if(birthMonth > 2  && birthMonth < 12){
+					if(birthMonth == 3 && birthDate == 1){	//4月1日生まれ
+						thisBirth = new Date(toDate.getFullYear(), birthMonth, birthDate);
+					}else{
+						thisBirth = new Date(fromDate.getFullYear(), birthMonth, birthDate);
+					}
+				//1,2,3月生まれ
+				}else{
+					thisBirth = new Date(toDate.getFullYear(), birthMonth, birthDate);
+				}
+				
+				//=======================================
+				//判定
+				var new_futan:int = 0;
+				if(calcNenrei >= 70){
+					var baseDate:Date = new Date(1944,3,2);	//1944/4/2
+					if(birth >= baseDate && calcNenrei < 75){
+						new_futan = 2;
+					}else{
+						new_futan = 1;
+					}
+				}else 
+				if(normalNenrei >= 7
+				||(normalNenrei == 6 
+				   && thisBirth.getTime() > new Date().getTime()
+				   && thisBirth.getTime() <= toDate.getTime())
+				){
+					new_futan = 3;
+				}else{
+					new_futan = 2;
+				}
+				
+				//自動反映
+				//編集時、または初期表示で2割から3割になる時に反映　
+				//#3474： 6歳就学時の変更（2割から3割へ変更）時だけ開くたびに確認変更する。
+				if(__isEdited
+				|| (this.futanStepper.value == 2 && new_futan == 3)){
+					
+					if(this.patientDetailInfoObj.FutanWariaiSaved != 0
+					&& this.patientDetailInfoObj.FutanWariaiSaved != new_futan){
+						//ユーザへ通知
+						this.futanStepper.setStyle("backgroundColor",0xFF6666);
+						futanWariaiAlert.visible = true;
+						//Alert.show("年齢の再計算により、負担割合の表示を変更します。\n変更後の内容で問題なければこのまま保存してください。");
+					}else{
+						this.futanStepper.setStyle("backgroundColor",0xFFFFFF);
+						futanWariaiAlert.visible = false;
+					}
+					this.futanStepper.value = new_futan;
+					patientDetailInfoObj.FutanWariai = new_futan;
+				}
+			}
+			
+			/**
+			 公費負担割合の自動変更 
+			 */
+			private function setKohiFutanWariai():void{
+				if(this.getsujiText.text != ""
+				|| this.nichijiText.text != ""
+				|| this.futanOnlySyoshinText.text != ""){
+					//値が異なれば負担割合の値で上書き変更
+					if(this.patientDetailInfoObj.KohiFutanWariaiSaved != this.futanStepper.value){
+						this.kohiFutanWariaiStepper.value = this.futanStepper.value;
+						this.kohiFutanWariaiStepper.setStyle("backgroundColor",0xFF6666);
+						kohiFutanWariaiAlert.visible = true;
+					}else{
+						this.kohiFutanWariaiStepper.setStyle("backgroundColor",0xFFFFFF);
+						kohiFutanWariaiAlert.visible = false;
+					}
+				}else{
+					this.kohiFutanWariaiStepper.value = this.patientDetailInfoObj.KohiFutanWariaiSaved;
+					this.kohiFutanWariaiStepper.setStyle("backgroundColor",0xFFFFFF);
+					kohiFutanWariaiAlert.visible = false;
+				}
+			} 
+			
+			/**
+			   削除ボタン
+			 */
+			private function onClickDeleteBtn(event:MouseEvent):void{
+				Alert.show("患者情報を削除します。関連するカルテの情報も全て削除されます。よろしいですか？",
+					GlobalInfo.ALERT_TITLE,Alert.YES | Alert.CANCEL,this,deleteAlertCloseHandler,null,Alert.CANCEL)
+			}
+			/**
+			   削除確認ダイアログを閉じたら、削除Remoting実行
+			 */
+			private function deleteAlertCloseHandler(e:CloseEvent):void{
+				if(e.detail==Alert.YES){
+					var obj:Object = {userID:GlobalInfo.userID,PatientID:GlobalInfo.selectedPatientID}
+					GlobalInfo.remotingConnection.call("PatientDetail.deleteData",new Responder(deleteOnSuccess,deleteOnFault),obj);
+				}
+			}
+			/**
+			   削除Remotingが正しく行われたら、イベントを発行し、取得側でViewStackをチェンジ
+			 */
+			private function deleteOnSuccess(resultObj:Object):void{
+				this.dispatchEvent(new Event('patientOnDelete',true,true));
+			}
+			/**
+			   削除Remoting失敗
+			 */
+			private function deleteOnFault(resultObj:Object):void{
+				//
+			}
+		]]>
+	</mx:Script>
+
+	<mx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+
+			/**
+			 * TextInputイベントは次フィールドへのフォーカスのみ
+			 */
+			private function onNoTextInput(nextTarget:TextInput,event:TextEvent):void{
+				event.target.text = event.text;
+				nextTarget.setFocus();
+			}
+			
+			private function resetFutanWariaiStyle():void{
+				this.futanStepper.setStyle("backgroundColor",0xFFFFFF);
+				futanWariaiAlert.visible = false;				
+			}
+			private function resetKohiFutanWariaiStyle():void{
+				this.kohiFutanWariaiStepper.setStyle("backgroundColor",0xFFFFFF);
+				kohiFutanWariaiAlert.visible = false;				
+			}
+			private function resetKougakuStyle():void{
+				this.kogakuGetsujiMax.setStyle("backgroundColor",0xFFFFFF);
+				kougakuAlert.visible = false;				
+			}
+
+
+			/**
+			 * 高額療養費 自己負担月額上限のセット
+			 * 
+			 * 「70歳以上」or「39で始まる8桁の保険者番号」で負担割合が1割の場合：12000
+			 * 「70歳以上」or「39で始まる8桁の保険者番号」で負担割合が3割の場合：44400
+			 * 上記のいずれかを満たし、かつ「区分１」or「区分２」にチェックが入っている場合：8000
+			 */
+			private function setKougakuGetsujiMax():void{
+				trace("setKougakuGetsujiMax");
+				
+				//画面の初期表示時は、値が０のときのみ再計算する
+//				if(__isEdited
+//				|| this.patientDetailInfoObj.KougakuGetsujiMaxSaved == ""){
+					var max:String = "";
+					var hokenjyaNo:String = this.no_0.text+this.no_1.text+this.no_2.text+this.no_3.text+this.no_4.text+this.no_5.text+this.no_6.text+this.no_7.text;
+					hokenjyaNo = hokenjyaNo.replace(/(^[ 　]+|[ 　]+$)/g, "");
+					
+					var isOver70:Boolean = (Number(this.nenreiText.text) >= 70);	//70歳以上
+					var is39No:Boolean = (hokenjyaNo.length == 8 && hokenjyaNo.substr(0,2) == "39");	//39で始まる8桁の保険者番号
+					var isKubun:Boolean = (this.kougakuKubunRadioGroup.selectedValue > 0);	//区分1または区分2
+					
+					if(isOver70 || is39No){
+						if(this.futanStepper.value == 1 || this.futanStepper.value == 2){
+							max = KOUGAKU_MAX_1.toString();
+						}else if(this.futanStepper.value == 3){
+							max = KOUGAKU_MAX_3.toString();
+						}
+						if(parseInt(max) > 0 && isKubun){
+							max = KOUGAKU_MAX_KUBUN.toString();
+						}
+					}
+					
+					trace(Number(this.patientDetailInfoObj.KougakuGetsujiMaxSaved));
+	//				if(Number(this.patientDetailInfoObj.KougakuGetsujiMaxSaved) != 0
+	//				&& Number(this.patientDetailInfoObj.KougakuGetsujiMaxSaved) != max){
+					if(this.patientDetailInfoObj.KougakuGetsujiMaxSaved != max){
+						//ユーザへ通知
+						this.kogakuGetsujiMax.setStyle("backgroundColor",0xFF6666);
+						kougakuAlert.visible = true;
+					}else{
+						this.kogakuGetsujiMax.setStyle("backgroundColor",0xFFFFFF);
+						kougakuAlert.visible = false;
+					}
+					this.kogakuGetsujiMax.text = max.toString(); 
+//				}
+			}
+
+
+			/**
+			   郵便番号ボタンをクリックしたら
+			 */
+			private function zipBtnOnClick(event:MouseEvent):void{
+				var obj:Object = {zip:this.zipCodeText.text};
+				GlobalInfo.remotingConnection.call("Zip.GetAddress",new Responder(onSuccessZipRead,onFalseZipRead),obj);
+			}
+
+			private function onSuccessZipRead(resultObj:Object):void{
+				this.add1Text.text = resultObj.data.address;
+			}
+			private function onFalseZipRead(resultObj:Object):void{
+
+			}
+
+		]]>
+	</mx:Script>
+
+
+	<mx:VBox left="5" top="5" bottom="5" width="100%">
+		<mx:HBox >
+			<mx:VBox width="40%" height="100%">
+				<mx:VBox width="100%" styleName="patientDetail">
+					<mx:Grid width="100%" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="患者番号"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<mx:TextInput id="patientIDText" editable="false" text="{this.patientDetailInfoObj.PatientID}" 
+											  change="this.onFieldChange(event);"  backgroundColor="#cccccc" width="80" textAlign="center"/> 
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+					<mx:Grid width="100%" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="保険者番号"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%" styleName="patientNumber">
+								<mx:HBox width="100%" horizontalGap="0">
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_0" maxChars="1" textInput="onNoTextInput(this.no_1,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoHoubetsu1}" restrict="0-9"/>
+									<mx:Spacer width="1" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_1" maxChars="1" textInput="onNoTextInput(this.no_2,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoHoubetsu2}" restrict="0-9"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_2" maxChars="1" textInput="onNoTextInput(this.no_3,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoTodouhuken1}" restrict="0-9"/>
+									<mx:Spacer width="1" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_3" maxChars="1" textInput="onNoTextInput(this.no_4,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoTodouhuken2}" restrict="0-9"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_4" maxChars="1" textInput="onNoTextInput(this.no_5,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoHokensya1}" restrict="0-9"  />
+									<mx:Spacer width="1" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_5" maxChars="1" textInput="onNoTextInput(this.no_6,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoHokensya2}" restrict="0-9"  />
+									<mx:Spacer width="1" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_6" maxChars="1" textInput="onNoTextInput(this.no_7,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoHokensya3}" restrict="0-9"  />
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" id="no_7" maxChars="1" textInput="onNoTextInput(this.no_7,event);this.setKougakuGetsujiMax();" change="this.onFieldChange(event);this.setKougakuGetsujiMax();" text="{this.patientDetailInfoObj.HokenjyaNoKensyo}" restrict="0-9"/>
+								</mx:HBox>
+
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="記号・番号"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="120" id="hokenKigouText" text="{this.patientDetailInfoObj.HokenKigou}" change="this.onFieldChange(event)"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="100%" id="hokenNoText" text="{this.patientDetailInfoObj.HokenNo}" change="this.onFieldChange(event)" />
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="有効期限"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:GengoComboBox width="80" id="YuukouGCombo" gengo="{this.patientDetailInfoObj.YuukouGengo}" change="this.onFieldChange(event)"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="YuukouYText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.YuukouYear}" change="this.onFieldChange(event)"/>
+								<mx:Label text="年"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="YuukouMText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.YuukouMonth}" change="this.onFieldChange(event)"/>
+								<mx:Label text="月"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="YuukouDText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.YuukouDay}" change="this.onFieldChange(event)"/>
+								<mx:Label text="日"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="被保険者氏名"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="250" id="hiHokensyaMeiText" text="{this.patientDetailInfoObj.HiHokensyaMei}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="資格取得"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:GengoComboBox width="80" id="shikakuGCombo" gengo="{this.patientDetailInfoObj.ShikakuGengo}" change="this.onFieldChange(event)"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" id="shikakuYText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.ShikakuYear}" change="this.onFieldChange(event)"/>
+								<mx:Label text="年"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" id="shikakuMText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.ShikakuMonth}" change="this.onFieldChange(event)"/>
+								<mx:Label text="月"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" id="shikakuDText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.ShikakuDay}" change="this.onFieldChange(event)" />
+								<mx:Label text="日"/>
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+				</mx:VBox>
+				<mx:VBox width="100%" styleName="patientDetail" backgroundColor="#FFFEFE" cornerRadius="0" borderColor="#010101" verticalGap="0">
+					<mx:Grid width="100%" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="事業所"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="senpakuSyoyuusyaText" text="{this.patientDetailInfoObj.SenpakuSyoyuusya}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="所在地"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="senpakuAddText" text="{this.patientDetailInfoObj.SenpakuAdd}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="電話番号"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="150" id="senpakuTelText" text="{this.patientDetailInfoObj.SenpakuTel}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+
+				</mx:VBox>
+
+				<mx:VBox width="100%" styleName="patientDetail"  backgroundColor="0xeeeeee" verticalGap="0">
+					<mx:Grid width="100%" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="保険者"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="hokenjyaNameText" text="{this.patientDetailInfoObj.HokenjyaName}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="所在地"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="hokenjyaAddText" text="{this.patientDetailInfoObj.HokenjyaAdd}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="電話番号"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="150" id="hokenjyaTelText" text="{this.patientDetailInfoObj.HokenjyaTel}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+
+				</mx:VBox>
+
+				<mx:VBox width="100%" styleName="patientDetail" cornerRadius="4" verticalGap="0">
+					<mx:Grid width="100%" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="初診日"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%" >
+								<MyComponent:GengoComboBox width="80" id="syoshinGCombo" gengo="{this.patientDetailInfoObj.SyoshinGengo}" change="this.onFieldChange(event)" />
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="syoshinYText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.SyoshinYear}" change="this.onFieldChange(event)"/>
+								<mx:Label text="年"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="syoshinMText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.SyoshinMonth}" change="this.onFieldChange(event)"  />
+								<mx:Label text="月"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="syoshinDText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.SyoshinDay}" change="this.onFieldChange(event)"/>
+								<mx:Label text="日"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="保険証確認日"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:GengoComboBox width="80" id="hokensyoGCombo" gengo="{this.patientDetailInfoObj.HokenKakuninGengo}" change="this.onFieldChange(event)"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="hokensyoYText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.HokenKakuninYear}" change="this.onFieldChange(event)" />
+								<mx:Label text="年"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="hokensyoMText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.HokenKakuninMonth}" change="this.onFieldChange(event)"/>
+								<mx:Label text="月"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="hokensyoDText" maxChars="2" restrict="0-9" text="{this.patientDetailInfoObj.HokenKakuninDay}" change="this.onFieldChange(event)"/>
+								<mx:Label text="日"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%" horizontalAlign="right">
+								<mx:Button label="本日確認" click="onClickConfirmToday(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="備考"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<mx:TextInput width="100%" id="noteText" text="{this.patientDetailInfoObj.Note}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>						
+
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100%" height="100%" colSpan="2">
+								<mx:Label text="「摘要欄コメント」として登録するコメント" fontWeight="bold"/>
+							</mx:GridItem>
+						</mx:GridRow>						
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="コメント１"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="TekiyoComment1" text="{this.patientDetailInfoObj.TekiyoComment1}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>						
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="コメント２"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="TekiyoComment2" text="{this.patientDetailInfoObj.TekiyoComment2}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>						
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="100" height="100%">
+								<mx:Label text="コメント３"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="100%" id="TekiyoComment3" text="{this.patientDetailInfoObj.TekiyoComment3}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>						
+
+					</mx:Grid>
+
+				</mx:VBox>
+
+			</mx:VBox>
+
+
+
+
+			<mx:VBox width="45%" height="100%">
+				<mx:VBox width="100%">
+					<mx:Grid width="100%" styleName="patientDetail" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Label text="氏"/>
+								<mx:Label text="＊" fontSize="12" color="#ff0000" fontWeight="normal"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="120" id="patientFamilyNameText" 
+									text="{this.patientDetailInfoObj.PatientFamilyName}" change="this.onFieldChange(event)" />
+								<mx:Label text="名"/>
+								<mx:Label text="＊" fontSize="12" color="#ff0000" fontWeight="normal"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="120" id="patientFirstNameText" 
+									text="{this.patientDetailInfoObj.PatientFirstName}" change="this.onFieldChange(event)"/>
+								<mx:Spacer width="30" />
+								<mx:Button id="updateBtnUpper" label="保存" width="90" click="onClickUpdateBtn(event);"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Label text="氏（カナ）"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="120" id="patientFamilyNameKanaText" 
+									text="{this.patientDetailInfoObj.PatientFamilyNameKana}" change="this.onFieldChange(event)"/>
+								<mx:Label text="名（カナ）"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="120" id="patientFirstNameKanaText" 
+									text="{this.patientDetailInfoObj.PatientFirstNameKana}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+
+						<!-- /追加 -->
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Text text="性別"/>
+								<mx:Label text="＊" fontSize="12" color="#ff0000" fontWeight="normal"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<mx:RadioButtonGroup id="sexRadioGroup" selectedValue="{int(this.patientDetailInfoObj.Sex)}"  change="this.onFieldChange(event)"/>
+								<mx:RadioButton label="男性" width="70" height="30" fontSize="16" value="0" groupName="sexRadioGroup"/>
+								<mx:RadioButton label="女性" width="76" height="30" fontSize="16" value="1" groupName="sexRadioGroup"/>
+								<mx:Label text="担当医"/>
+								<mx:ComboBox id="doctorCombo" dataProvider="{__arrDoctor}" change="this.onFieldChange(event)" />
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow  height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Label text="生年月日" fontSize="12"/>
+								<mx:Label text="＊" fontSize="12" color="#ff0000" fontWeight="normal"/>
+							</mx:GridItem>
+							<mx:GridItem height="100%">
+								<MyComponent:GengoComboBox width="90" id="birthGCombo" gengo="{this.patientDetailInfoObj.BirthGemgo}" change="this.onFieldChange(event);setNenrei();this.setKougakuGetsujiMax();"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="birthYText" maxChars="2" restrict="0-9" 
+									text="{this.patientDetailInfoObj.BirthYear}" change="this.onFieldChange(event);setNenrei();this.setKougakuGetsujiMax();" />
+								<mx:Label text="年" width="24"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="birthMText" maxChars="2" restrict="0-9" 
+									text="{this.patientDetailInfoObj.BirthMonth}" change="this.onFieldChange(event);setNenrei();this.setKougakuGetsujiMax();"/>
+								<mx:Label text="月" width="24"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="35" textAlign="center" id="birthDText" maxChars="2" restrict="0-9" 
+									text="{this.patientDetailInfoObj.BirthDay}" change="this.onFieldChange(event);setNenrei();this.setKougakuGetsujiMax();"/>
+								<mx:Label text="日" width="24"/>
+								<mx:TextInput width="35" id="nenreiText" editable="false" backgroundColor="#cccccc" textAlign="center"/>
+								<mx:Label width="24" text="歳"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Label text="〒"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="120" id="zipCodeText" 
+									text="{this.patientDetailInfoObj.Zip}" change="this.onFieldChange(event)" />
+								<mx:Button label="〒から住所入力" id="zipBtn" click="zipBtnOnClick(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Label text="住所"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="400" id="add1Text" 
+									text="{this.patientDetailInfoObj.Add1}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_ON}" width="400" id="add2Text" 
+									text="{this.patientDetailInfoObj.Add2}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="90" height="100%">
+								<mx:Label text="TEL"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="150" id="telText" 
+									text="{this.patientDetailInfoObj.Tel1}" change="this.onFieldChange(event)"/>
+								<mx:Label text="TEL2"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="150" id="tel2Text" 
+									text="{this.patientDetailInfoObj.Tel2}" change="this.onFieldChange(event)"/>
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+					<mx:HBox width="100%" paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0">
+						<mx:Grid width="100%" styleName="patientDetail" verticalGap="3">
+							<mx:GridRow width="100%" height="100%">
+								<mx:GridItem width="90" height="100%">
+									<mx:Label text="続柄"/>
+									<mx:Label text="＊" fontSize="12" color="#ff0000" fontWeight="normal"/>
+								</mx:GridItem>
+								<mx:GridItem>
+									<mx:ComboBox id="zokugaraCombo" width="90" selectedIndex="{this.patientDetailInfoObj.Zokugara}" change="this.onFieldChange(event)">
+										<mx:ArrayCollection>
+											<mx:Object label="" />
+											<mx:Object label="本人" />
+											<mx:Object label="家族" />
+										</mx:ArrayCollection>
+									</mx:ComboBox>
+									<mx:Label text="負担割合" />
+									<mx:NumericStepper id="futanStepper" width="55" value="{this.patientDetailInfoObj.FutanWariai}" change="this.onFieldChange(event);resetFutanWariaiStyle();this.setKougakuGetsujiMax();" maxChars="2" minimum="0" maximum="10" textAlign="center" />
+									<mx:Label text="割" width="20"/>
+								</mx:GridItem>
+							</mx:GridRow>
+							<mx:GridRow width="100%" height="100%">
+								<mx:GridItem width="90" height="100%">
+									<mx:Label text="職務事由" />
+								</mx:GridItem>
+								<mx:GridItem>
+									<mx:ComboBox id="jiyuuCombo" selectedIndex="{this.patientDetailInfoObj.SyokumuJiyuu}" change="this.onFieldChange(event)">
+										<mx:ArrayCollection>
+											<mx:Object label="" />
+											<mx:Object label="職務上" />
+											<mx:Object label="下船３ヶ月以内" />
+											<mx:Object label="通勤災害" />
+										</mx:ArrayCollection>
+									</mx:ComboBox>
+									<mx:CheckBox id="konnanCheckBox" selected="{this.patientDetailInfoObj.Konnan}" label="困難（障）" height="30" fontWeight="bold"/>
+								</mx:GridItem>
+							</mx:GridRow>
+						</mx:Grid>
+						<mx:TextArea id="futanWariaiAlert" text="≪変更されています&#xd;　 保存してください" width="55%"
+							 color="#FF0000" visible="false" editable="false" selectable="false" borderStyle="none" backgroundAlpha="0" fontSize="12"/>	
+					</mx:HBox>
+				</mx:VBox>
+				<mx:VBox width="100%" styleName="patientDetail" backgroundColor="0xeeeeee">
+					<mx:Grid width="100%" verticalGap="3">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="95" height="17" horizontalScrollPolicy="off">
+								<mx:CheckBox id="kohiCheckBox" selected="{this.patientDetailInfoObj.KohiUmu}" label="公費あり" height="30" fontWeight="bold"/>
+							</mx:GridItem>
+							<mx:GridItem width="140" height="100%">
+								<mx:Label text="公費負担者番号"/>
+								<mx:Spacer width="19" />
+								<mx:HBox  horizontalGap="1">		
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1" text="{this.patientDetailInfoObj.KohiFutanNo1_0}"  id="c_0" textInput="onNoTextInput(this.c_1,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_1}" id="c_1" textInput="onNoTextInput(this.c_2,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_2}" id="c_2" textInput="onNoTextInput(this.c_3,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_3}" id="c_3" textInput="onNoTextInput(this.c_4,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_4}" id="c_4" textInput="onNoTextInput(this.c_5,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_5}" id="c_5" textInput="onNoTextInput(this.c_6,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_6}" id="c_6" textInput="onNoTextInput(this.c_7,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo1_7}" id="c_7" textInput="onNoTextInput(this.c_7,event);"/>
+								</mx:HBox>
+							</mx:GridItem>
+
+						</mx:GridRow>
+
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem width="140" height="100%">
+								<mx:Label text="公費受給者番号"/>
+								<mx:Spacer width="19" />
+								<mx:HBox  horizontalGap="1">		
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1" text="{this.patientDetailInfoObj.KohiJyukyuNo1_0}"  id="d_0" textInput="onNoTextInput(this.d_1,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo1_1}" id="d_1" textInput="onNoTextInput(this.d_2,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo1_2}" id="d_2" textInput="onNoTextInput(this.d_3,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo1_3}" id="d_3" textInput="onNoTextInput(this.d_4,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo1_4}" id="d_4" textInput="onNoTextInput(this.d_5,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo1_5}" id="d_5" textInput="onNoTextInput(this.d_6,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo1_6}" id="d_6" textInput="onNoTextInput(this.d_6,event);"/>
+								</mx:HBox>
+
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem width="140" height="100%">
+								<mx:Label text="第２公費負担者番号"/>
+								<mx:HBox horizontalGap="1" >
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1" text="{this.patientDetailInfoObj.KohiFutanNo2_0}"  id="a_0" textInput="onNoTextInput(this.a_1,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_1}" id="a_1" textInput="onNoTextInput(this.a_2,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_2}" id="a_2" textInput="onNoTextInput(this.a_3,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_3}" id="a_3" textInput="onNoTextInput(this.a_4,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_4}" id="a_4" textInput="onNoTextInput(this.a_5,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_5}" id="a_5" textInput="onNoTextInput(this.a_6,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_6}" id="a_6" textInput="onNoTextInput(this.a_7,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiFutanNo2_7}" id="a_7" textInput="onNoTextInput(this.a_7,event);"/>
+								</mx:HBox>
+
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem width="140" height="100%">
+								<mx:Label text="第２公費受給者番号"/>
+								<mx:HBox horizontalGap="1">
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1" text="{this.patientDetailInfoObj.KohiJyukyuNo2_0}"  id="b_0" textInput="onNoTextInput(this.b_1,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo2_1}" id="b_1" textInput="onNoTextInput(this.b_2,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo2_2}" id="b_2" textInput="onNoTextInput(this.b_3,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo2_3}" id="b_3" textInput="onNoTextInput(this.b_4,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo2_4}" id="b_4" textInput="onNoTextInput(this.b_5,event);"/>
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo2_5}" id="b_5" textInput="onNoTextInput(this.b_6,event);"/>
+									<mx:Spacer width="5" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" width="25" textAlign="center" maxChars="1"  text="{this.patientDetailInfoObj.KohiJyukyuNo2_6}" id="b_6" textInput="onNoTextInput(this.b_6,event);"/>
+								</mx:HBox>
+
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem>
+								<mx:Label text="患者負担割合"/>
+								<mx:NumericStepper id="kohiFutanWariaiStepper" width="55" value="{patientDetailInfoObj.KohiFutanWariai}" enabled="{this.kohiCheckBox.selected}"
+									 change="this.onFieldChange(event);resetKohiFutanWariaiStyle();" maxChars="2" maximum="10" textAlign="center" backgroundColor="0xFFFFFF"/>
+								<mx:Label text="割" />
+								<mx:TextArea id="kohiFutanWariaiAlert" text="≪変更されています。 保存してください" width="60%"
+									 color="#FF0000" visible="false" editable="false" selectable="false" borderStyle="none" backgroundAlpha="0" fontSize="12" height="20"/>	
+								
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem width="100%">
+								<mx:HBox horizontalGap="0" verticalAlign="middle">
+								<mx:Label text="月次上限"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" id="getsujiText" textAlign="right" width="55" 
+									text="{patientDetailInfoObj.GetsujiMax}" enabled="{this.kohiCheckBox.selected}" change="this.onFieldChange(event);setKohiFutanWariai();"/>
+								<mx:Label text="円" />
+								<mx:Label text="日次上限"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" id="nichijiText" textAlign="right" width="55" 
+									text="{patientDetailInfoObj.NichijiMax}" enabled="{this.kohiCheckBox.selected}" change="this.onFieldChange(event);setKohiFutanWariai();"/>
+								<mx:Label text="円" />
+								<mx:Label text="月次回数上限"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" id="getsujiKaisuText" textAlign="right" width="40" text="{patientDetailInfoObj.GetsujiKaisuMax}" enabled="{this.kohiCheckBox.selected}" change="this.onFieldChange(event)"/>
+								<mx:Label text="回" />
+								</mx:HBox>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem width="100%">
+								<mx:HBox horizontalGap="0" verticalAlign="middle">
+								<mx:Label text="初診時だけ負担金"/>
+								<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" id="futanOnlySyoshinText" textAlign="right" width="55"
+									text="{patientDetailInfoObj.FutanOnlySyoshin}" enabled="{this.kohiCheckBox.selected}" change="this.onFieldChange(event);setKohiFutanWariai();"/>
+								<mx:Label text="円" />
+								<mx:Spacer width="10" />
+								<mx:Label text="備考"/>
+								<mx:TextInput id="bikouText" text="{patientDetailInfoObj.bikou}" enabled="{this.kohiCheckBox.selected}" change="this.onFieldChange(event)"/>
+								</mx:HBox>
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+				</mx:VBox>
+				
+				<mx:VBox width="100%" styleName="patientDetail" backgroundColor="0xeeeeee">
+					<mx:Grid width="100%" verticalGap="0">
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem width="95" height="17">
+								<mx:Label text="高額療養費"/>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<mx:HBox width="100%" paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0">
+									<mx:Label text="自己負担月額上限"/>
+									<mx:Spacer width="4" />
+									<MyComponent:IMETextInput ime="{IMETextInput.IME_MODE_OFF}" id="kogakuGetsujiMax" text="{patientDetailInfoObj.KougakuGetsujiMax}" width="110" editable="true" textAlign="right" backgroundColor="#FFFFFF"/><mx:Label text="円" />
+									<mx:TextArea id="kougakuAlert" text="≪変更されています&#xd;　 保存してください" width="120" height="37"
+										 color="#FF0000" visible="false" editable="false" selectable="false" borderStyle="none" backgroundAlpha="0" fontSize="12"/>	
+								</mx:HBox>
+							</mx:GridItem>
+						</mx:GridRow>
+						<mx:GridRow width="100%" height="100%">
+							<mx:GridItem>
+							</mx:GridItem>
+							<mx:GridItem width="100%" height="100%">
+								<mx:VBox width="100%" height="100%" verticalGap="0">
+									<mx:RadioButtonGroup id="kougakuKubunRadioGroup" selectedValue="{int(this.patientDetailInfoObj.KougakuKubun)}"  change="this.onFieldChange(event);this.setKougakuGetsujiMax();"/>
+									<mx:HBox width="100%" horizontalGap="0">
+										<mx:RadioButton label="認定証なしまたは区分Ⅲ・Ⅳ" fontWeight="bold" value="0" groupName="kougakuKubunRadioGroup" height="27"/>
+										<mx:RadioButton label="区分Ⅰ" width="80" fontWeight="bold" value="1" groupName="kougakuKubunRadioGroup" height="27"/>
+										<mx:RadioButton label="区分Ⅱ" width="80" fontWeight="bold" value="2" groupName="kougakuKubunRadioGroup" height="27"/>
+									</mx:HBox>
+									<mx:HBox width="100%" horizontalGap="0">
+										<mx:RadioButton label="区分ア" width="15%" fontWeight="bold" value="101" groupName="kougakuKubunRadioGroup" height="27"/>
+										<mx:RadioButton label="区分イ" width="15%" fontWeight="bold" value="102" groupName="kougakuKubunRadioGroup" height="27"/>
+										<mx:RadioButton label="区分ウ" width="15%" fontWeight="bold" value="103" groupName="kougakuKubunRadioGroup" height="27"/>
+										<mx:RadioButton label="区分エ" width="15%" fontWeight="bold" value="104" groupName="kougakuKubunRadioGroup" height="27"/>
+										<mx:RadioButton label="区分オ" width="80" fontWeight="bold" value="105" groupName="kougakuKubunRadioGroup" height="27"/>
+									</mx:HBox>
+								</mx:VBox>
+							</mx:GridItem>
+						</mx:GridRow>
+					</mx:Grid>
+				</mx:VBox>
+				
+			</mx:VBox>
+		</mx:HBox>
+		<mx:HBox width="95%" horizontalAlign="right" verticalAlign="bottom">
+			<mx:Label text="＊は入力必須項目です。" fontSize="12" color="#ff0000" fontWeight="normal"/>
+			<mx:Button id="deleteBtn" label="削除" width="90" click="onClickDeleteBtn(event);"/>
+			<mx:Button id="updateBtn" label="保存" width="90" click="onClickUpdateBtn(event);"/>
+		</mx:HBox>
+	</mx:VBox>
+</mx:Canvas>
